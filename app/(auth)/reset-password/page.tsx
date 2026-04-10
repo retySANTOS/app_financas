@@ -20,14 +20,22 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Supabase injeta o token no hash da URL — precisamos aguardar a sessão ser estabelecida
+  // Verifica sessão ativa (token já processado do hash da URL)
   useEffect(() => {
     const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+
+    // Tenta obter sessão já existente (caso o hash já foi processado)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+
+    // Escuta o evento caso chegue depois
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         setReady(true);
       }
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
