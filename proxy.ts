@@ -37,7 +37,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Se autenticado, não deixa acessar login/signup
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  const authOnlyPaths = ["/login", "/signup", "/forgot-password"];
+  if (user && authOnlyPaths.includes(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
