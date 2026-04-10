@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -16,28 +16,8 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [ready, setReady] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  // Verifica sessão ativa (token já processado do hash da URL)
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Tenta obter sessão já existente (caso o hash já foi processado)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
-
-    // Escuta o evento caso chegue depois
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
-        setReady(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,7 +37,7 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      toast({ title: "Erro ao redefinir senha", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao redefinir senha", description: "O link pode ter expirado. Solicite um novo.", variant: "destructive" });
     } else {
       setDone(true);
       setTimeout(() => router.push("/dashboard"), 2500);
@@ -90,13 +70,6 @@ export default function ResetPasswordPage() {
                 </div>
                 <p className="font-medium text-gray-900">Senha redefinida com sucesso!</p>
                 <p className="text-sm text-gray-500">Redirecionando para o dashboard...</p>
-              </div>
-            </CardContent>
-          ) : !ready ? (
-            <CardContent className="py-8">
-              <div className="flex flex-col items-center gap-3 text-gray-400">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-sm">Verificando link de recuperação...</p>
               </div>
             </CardContent>
           ) : (
