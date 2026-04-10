@@ -69,9 +69,15 @@ export function TransactionsClient({ initialTransactions }: TransactionsClientPr
   }, [transactions, searchQuery, filterMonth, filterCategory, filterType]);
 
   async function handleCreate(data: TransactionFormData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Sessão expirada", description: "Faça login novamente.", variant: "destructive" });
+      return;
+    }
+
     const { data: created, error } = await supabase
       .from("transactions")
-      .insert(data)
+      .insert({ ...data, user_id: user.id })
       .select()
       .single();
 
