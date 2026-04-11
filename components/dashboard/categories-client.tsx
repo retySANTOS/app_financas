@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Category, CategoryType, DEFAULT_CATEGORIES } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -9,20 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Trash2, Tag, Loader2, LayoutList } from "lucide-react";
-import { CATEGORY_COLORS } from "@/lib/utils";
-
-const TYPE_LABELS: Record<CategoryType, string> = {
-  receita: "Receita",
-  despesa: "Despesa",
-  ambas: "Receita e Despesa",
-};
-
-const TYPE_STYLES: Record<CategoryType, string> = {
-  receita: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-  despesa: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-  ambas: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-};
+import { Plus, Trash2, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 
 interface CategoriesClientProps {
   initialCategories: Category[];
@@ -33,17 +20,45 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
   const [name, setName] = useState("");
   const [type, setType] = useState<CategoryType>("despesa");
   const [loading, setLoading] = useState(false);
-  const [seedingDefaults, setSeedingDefaults] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+
+  // Seed automático se não houver nenhuma categoria
+  useEffect(() => {
+    if (initialCategories.length === 0) {
+      seedDefaults();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function seedDefaults() {
+    setSeeding(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSeeding(false); return; }
+
+    const toInsert = DEFAULT_CATEGORIES.filter(
+      (d) => !categories.some((c) => c.name === d.name)
+    ).map((d) => ({ ...d, user_id: user.id }));
+
+    if (toInsert.length === 0) { setSeeding(false); return; }
+
+    const { data, error } = await supabase.from("categories").insert(toInsert).select();
+    if (!error && data) {
+      setCategories((prev) =>
+        [...prev, ...data].sort((a, b) => a.name.localeCompare(b.name))
+      );
+    }
+    setSeeding(false);
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-
     setLoading(true);
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
 
     const { data, error } = await supabase
       .from("categories")
@@ -52,9 +67,7 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
       .single();
 
     if (error) {
-      const msg = error.code === "23505"
-        ? "Já existe uma categoria com esse nome."
-        : error.message;
+      const msg = error.code === "23505" ? "Já existe uma categoria com esse nome." : error.message;
       toast({ title: "Erro ao adicionar", description: msg, variant: "destructive" });
     } else {
       setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
@@ -64,9 +77,8 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
     setLoading(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Excluir esta categoria?")) return;
-
+  async function handleDelete(id: string, catName: string) {
+    if (!confirm(`Excluir a categoria "${catName}"?`)) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
@@ -76,61 +88,21 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
     }
   }
 
-  async function handleSeedDefaults() {
-    setSeedingDefaults(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const toInsert = DEFAULT_CATEGORIES.filter(
-      (d) => !categories.some((c) => c.name === d.name)
-    ).map((d) => ({ ...d, user_id: user.id }));
-
-    if (toInsert.length === 0) {
-      toast({ title: "Todas as categorias padrão já existem." });
-      setSeedingDefaults(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("categories")
-      .insert(toInsert)
-      .select();
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      setCategories((prev) =>
-        [...prev, ...(data ?? [])].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      toast({ title: `${data?.length} categorias padrão adicionadas!` });
-    }
-    setSeedingDefaults(false);
-  }
-
-  const grouped = {
-    receita: categories.filter((c) => c.type === "receita" || c.type === "ambas"),
-    despesa: categories.filter((c) => c.type === "despesa" || c.type === "ambas"),
-  };
+  const receitas = categories.filter((c) => c.type === "receita" || c.type === "ambas");
+  const despesas = categories.filter((c) => c.type === "despesa" || c.type === "ambas");
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-4xl">
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Categorias</h1>
-          <p className="text-muted-foreground text-sm">{categories.length} categoria(s) cadastrada(s)</p>
-        </div>
-        {categories.length === 0 && (
-          <Button variant="outline" size="sm" onClick={handleSeedDefaults} disabled={seedingDefaults}>
-            {seedingDefaults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LayoutList className="mr-2 h-4 w-4" />}
-            Adicionar categorias padrão
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Categorias</h1>
+        <p className="text-muted-foreground text-sm">{categories.length} categoria(s) cadastrada(s)</p>
       </div>
 
-      {/* Formulário de nova categoria */}
+      {/* Formulário */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Nova categoria
@@ -142,13 +114,13 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
               <Label htmlFor="cat-name">Nome</Label>
               <Input
                 id="cat-name"
-                placeholder="Ex: Academia, Pets, Aluguel..."
+                placeholder="Ex: Academia, Pets, Dividendos..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
-            <div className="w-full sm:w-48 space-y-1">
+            <div className="w-full sm:w-52 space-y-1">
               <Label>Tipo</Label>
               <Select value={type} onValueChange={(v) => setType(v as CategoryType)}>
                 <SelectTrigger>
@@ -163,78 +135,118 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
             </div>
             <div className="flex items-end">
               <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                <span className="ml-1">Adicionar</span>
+                {loading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Plus className="h-4 w-4" />}
+                <span className="ml-1.5">Adicionar</span>
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      {/* Lista de categorias */}
-      {categories.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-14 text-muted-foreground gap-3">
-            <Tag className="h-10 w-10 opacity-30" />
-            <p className="text-sm">Nenhuma categoria cadastrada.</p>
-            <Button variant="outline" size="sm" onClick={handleSeedDefaults} disabled={seedingDefaults}>
-              {seedingDefaults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LayoutList className="mr-2 h-4 w-4" />}
-              Adicionar categorias padrão
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {categories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: (CATEGORY_COLORS[cat.name] ?? "#6b7280") + "25" }}
-                    >
-                      <Tag
-                        className="h-3.5 w-3.5"
-                        style={{ color: CATEGORY_COLORS[cat.name] ?? "#6b7280" }}
-                      />
-                    </div>
-                    <span className="font-medium text-sm">{cat.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_STYLES[cat.type]}`}>
-                      {TYPE_LABELS[cat.type]}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleDelete(cat.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Loading seed */}
+      {seeding && (
+        <div className="flex items-center gap-3 text-muted-foreground text-sm py-4">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Carregando categorias padrão...
+        </div>
       )}
 
-      {/* Resumo por tipo */}
-      {categories.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            {grouped.receita.length} para Receita
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            {grouped.despesa.length} para Despesa
-          </div>
+      {/* Relatório separado por tipo */}
+      {!seeding && categories.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* Receitas */}
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-base flex items-center gap-2 text-green-600 dark:text-green-400">
+                <TrendingUp className="h-4 w-4" />
+                Receita
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {receitas.length} categoria(s)
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {receitas.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhuma categoria de receita
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {receitas.map((cat) => (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/40 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                        <span className="text-sm font-medium">{cat.name}</span>
+                        {cat.type === "ambas" && (
+                          <span className="text-xs text-muted-foreground">(também despesa)</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDelete(cat.id, cat.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Despesas */}
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-base flex items-center gap-2 text-red-600 dark:text-red-400">
+                <TrendingDown className="h-4 w-4" />
+                Despesa
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {despesas.length} categoria(s)
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {despesas.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhuma categoria de despesa
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {despesas.map((cat) => (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/40 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                        <span className="text-sm font-medium">{cat.name}</span>
+                        {cat.type === "ambas" && (
+                          <span className="text-xs text-muted-foreground">(também receita)</span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDelete(cat.id, cat.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
         </div>
       )}
     </div>
