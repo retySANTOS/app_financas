@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FinançasPessoais — Controle Financeiro",
+  title: "Rotina Financeira do Rety — Controle Financeiro",
   description: "Gerencie suas receitas, despesas e acompanhe seu saldo de forma simples e visual.",
 };
 

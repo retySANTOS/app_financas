@@ -20,7 +20,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
             <TrendingUp className="h-6 w-6" />
-            FinançasPessoais
+            Rotina Financeira do Rety
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
@@ -170,9 +170,9 @@ export default function LandingPage() {
         <div className="container mx-auto text-center text-gray-500 text-sm">
           <div className="flex items-center justify-center gap-2 font-semibold text-gray-700 mb-2">
             <TrendingUp className="h-4 w-4 text-blue-600" />
-            FinançasPessoais
+            Rotina Financeira do Rety
           </div>
-          <p>© {new Date().getFullYear()} FinançasPessoais. Controle financeiro pessoal.</p>
+          <p>© {new Date().getFullYear()} Rotina Financeira do Rety. Controle financeiro pessoal.</p>
         </div>
       </footer>
     </div>

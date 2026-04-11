@@ -41,7 +41,7 @@ export default function LoginPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-blue-600">
             <TrendingUp className="h-8 w-8" />
-            FinançasPessoais
+            Rotina Financeira do Rety
           </Link>
         </div>
 

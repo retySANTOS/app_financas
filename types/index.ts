@@ -1,37 +1,26 @@
 export type TransactionType = "receita" | "despesa";
 
-export type Category =
-  | "Alimentação"
-  | "Transporte"
-  | "Moradia"
-  | "Lazer"
-  | "Saúde"
-  | "Educação"
-  | "Salário"
-  | "Freelance"
-  | "Outros";
+export type CategoryType = "receita" | "despesa" | "ambas";
 
-export const CATEGORIES: Category[] = [
-  "Alimentação",
-  "Transporte",
-  "Moradia",
-  "Lazer",
-  "Saúde",
-  "Educação",
-  "Salário",
-  "Freelance",
-  "Outros",
-];
+export interface Category {
+  id: string;
+  user_id: string;
+  name: string;
+  type: CategoryType;
+  created_at: string;
+}
 
-export const INCOME_CATEGORIES: Category[] = ["Salário", "Freelance", "Outros"];
-export const EXPENSE_CATEGORIES: Category[] = [
-  "Alimentação",
-  "Transporte",
-  "Moradia",
-  "Lazer",
-  "Saúde",
-  "Educação",
-  "Outros",
+export const DEFAULT_CATEGORIES: { name: string; type: CategoryType }[] = [
+  { name: "Salário", type: "receita" },
+  { name: "Freelance", type: "receita" },
+  { name: "Investimentos", type: "ambas" },
+  { name: "Alimentação", type: "despesa" },
+  { name: "Transporte", type: "despesa" },
+  { name: "Moradia", type: "despesa" },
+  { name: "Saúde", type: "despesa" },
+  { name: "Educação", type: "despesa" },
+  { name: "Lazer", type: "despesa" },
+  { name: "Outros", type: "ambas" },
 ];
 
 export interface Transaction {
@@ -41,7 +30,7 @@ export interface Transaction {
   amount: number;
   date: string;
   type: TransactionType;
-  category: Category;
+  category: string;
   created_at: string;
 }
 
@@ -50,17 +39,5 @@ export interface TransactionFormData {
   amount: number;
   date: string;
   type: TransactionType;
-  category: Category;
-}
-
-export interface DashboardSummary {
-  totalIncome: number;
-  totalExpenses: number;
-  balance: number;
-}
-
-export interface CategoryData {
-  name: string;
-  value: number;
-  color: string;
+  category: string;
 }

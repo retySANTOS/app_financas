@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Transaction, TransactionFormData, CATEGORIES, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
+import { Transaction, TransactionFormData, Category } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,12 @@ import { Loader2 } from "lucide-react";
 
 interface TransactionFormProps {
   transaction?: Transaction;
+  categories: Category[];
   onSubmit: (data: TransactionFormData) => Promise<void>;
   onCancel: () => void;
 }
 
-export function TransactionForm({ transaction, onSubmit, onCancel }: TransactionFormProps) {
+export function TransactionForm({ transaction, categories, onSubmit, onCancel }: TransactionFormProps) {
   const today = new Date().toISOString().split("T")[0];
 
   const [form, setForm] = useState<TransactionFormData>({
@@ -23,16 +24,17 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
     amount: transaction ? Number(transaction.amount) : 0,
     date: transaction?.date ?? today,
     type: transaction?.type ?? "despesa",
-    category: transaction?.category ?? "Outros",
+    category: transaction?.category ?? "",
   });
   const [loading, setLoading] = useState(false);
 
-  const categoryOptions = form.type === "receita" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const categoryOptions = categories.filter(
+    (c) => c.type === form.type || c.type === "ambas"
+  );
 
   function handleTypeChange(value: string) {
     const type = value as "receita" | "despesa";
-    const defaultCat = type === "receita" ? "Salário" : "Alimentação";
-    setForm((prev) => ({ ...prev, type, category: defaultCat }));
+    setForm((prev) => ({ ...prev, type, category: "" }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,26 +104,35 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
 
         <div className="space-y-2">
           <Label>Categoria</Label>
-          <Select
-            value={form.category}
-            onValueChange={(v) => setForm((p) => ({ ...p, category: v as typeof form.category }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {categoryOptions.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {categoryOptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground border rounded-md px-3 py-2">
+              Nenhuma categoria para este tipo.{" "}
+              <a href="/dashboard/categories" className="text-blue-600 hover:underline">
+                Adicionar categorias
+              </a>
+            </p>
+          ) : (
+            <Select
+              value={form.category}
+              onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <DialogFooter className="gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading || !form.category}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {transaction ? "Salvar" : "Adicionar"}
           </Button>

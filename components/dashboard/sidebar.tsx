@@ -11,6 +11,7 @@ import {
   TrendingUp,
   LayoutDashboard,
   ArrowLeftRight,
+  Tag,
   LogOut,
   Menu,
   X,
@@ -19,6 +20,7 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/transactions", label: "Transações", icon: ArrowLeftRight },
+  { href: "/dashboard/categories", label: "Categorias", icon: Tag },
 ];
 
 interface SidebarProps {
@@ -67,7 +69,7 @@ export function Sidebar({ userEmail }: SidebarProps) {
         <div className="p-6 border-b flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg text-blue-600">
             <TrendingUp className="h-6 w-6" />
-            FinançasPessoais
+            Rotina Financeira do Rety
           </Link>
           <ThemeToggle />
         </div>

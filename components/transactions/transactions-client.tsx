@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Transaction, TransactionFormData, CATEGORIES } from "@/types";
+import { Transaction, TransactionFormData, Category } from "@/types";
 import { formatCurrency, formatDate, CATEGORY_COLORS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 
 interface TransactionsClientProps {
   initialTransactions: Transaction[];
+  initialCategories: Category[];
 }
 
 function getMonthOptions() {
@@ -41,15 +41,15 @@ function getMonthOptions() {
   return options;
 }
 
-export function TransactionsClient({ initialTransactions }: TransactionsClientProps) {
+export function TransactionsClient({ initialTransactions, initialCategories }: TransactionsClientProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [categories] = useState<Category[]>(initialCategories);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
-  const router = useRouter();
   const supabase = createClient();
   const { toast } = useToast();
   const monthOptions = getMonthOptions();
@@ -181,6 +181,7 @@ export function TransactionsClient({ initialTransactions }: TransactionsClientPr
             </DialogTrigger>
             <TransactionForm
               transaction={editingTransaction}
+              categories={categories}
               onSubmit={editingTransaction ? handleUpdate : handleCreate}
               onCancel={() => { setDialogOpen(false); setEditingTransaction(undefined); }}
             />
@@ -232,8 +233,8 @@ export function TransactionsClient({ initialTransactions }: TransactionsClientPr
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as categorias</SelectItem>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
